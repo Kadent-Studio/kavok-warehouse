@@ -38,7 +38,7 @@ export function FilterMenu({
             size="sm"
             data-press
             className={cn(
-              "h-9 gap-1.5 text-[13px]",
+              "h-9 gap-1.5 rounded-full text-[13px]",
               active &&
                 "border-primary/40 bg-primary/5 text-primary hover:bg-primary/10",
             )}
@@ -79,7 +79,7 @@ export function FilterChip({
   onRemove: () => void;
 }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-primary/25 bg-primary/5 pl-2 pr-1 py-1 text-[12px] font-medium text-primary">
+    <span className="inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/5 pl-2.5 pr-1 py-1 text-[12px] font-medium text-primary">
       {label}
       <button
         type="button"

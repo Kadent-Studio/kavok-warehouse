@@ -53,6 +53,7 @@ Base 4px. Padding de página: `p-6 lg:p-8`. Cards: `p-5`/`p-6`. Celdas de tabla:
 
 ## Component API notes
 
+- **Instalar, no construir**: si un componente existe en shadcn, instalarlo con `pnpm dlx shadcn@latest add <componente>` antes de escribir nada. Solo construir a mano lo que shadcn NO ofrece. Los wrappers de composición a nivel de app (client component que envuelve un primitivo shadcn para conectar router/estado) sí se escriben a mano.
 - **shadcn 4.12 con base-ui**: NUNCA `asChild`. Usar `render={<Link>…</Link>}`.
 - Cuando un `Button` renderiza un `<Link>`/`<a>`: pasar **`nativeButton={false}`** para evitar el warning de accesibilidad de Base UI.
 - `Select onValueChange` recibe `string | null` — proteger con `v && setState(v)`.
@@ -72,3 +73,4 @@ Base 4px. Padding de página: `p-6 lg:p-8`. Cards: `p-5`/`p-6`. Celdas de tabla:
 - No radios afilados — mínimo `rounded-lg`/`rounded-xl` en cards
 - No mezclar Radix `asChild` — este proyecto es base-ui `render`
 - No múltiples acentos — todo índigo
+- No reconstruir componentes UI que shadcn ya provee — instalar vía CLI (ver Component API notes)

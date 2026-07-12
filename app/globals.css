@@ -245,3 +245,70 @@
     transition: none;
   }
 }
+
+/* ── Login: hangar manifest panel ─────────────────────────── */
+.hangar-panel {
+  background-color: var(--sidebar);
+  background-image: linear-gradient(
+      to right,
+      color-mix(in oklch, var(--ink) 4.5%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--ink) 4.5%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 46px 46px;
+  background-position: center;
+}
+.hangar-panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      115% 95% at 10% -8%,
+      oklch(0.99 0.022 88 / 0.95),
+      transparent 50%
+    ),
+    radial-gradient(
+      95% 115% at 112% 115%,
+      color-mix(in oklch, var(--primary) 18%, transparent),
+      transparent 55%
+    );
+  pointer-events: none;
+}
+.dark .hangar-panel::before {
+  background: radial-gradient(
+      115% 95% at 10% -8%,
+      color-mix(in oklch, var(--primary) 15%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(95% 115% at 112% 115%, oklch(0.62 0.05 60 / 0.1), transparent 55%);
+}
+.hangar-ghost {
+  font-family: var(--font-display);
+  color: color-mix(in oklch, var(--ink) 5%, transparent);
+  line-height: 0.7;
+  letter-spacing: -0.05em;
+  user-select: none;
+}
+
+@keyframes hangar-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+.status-live {
+  animation: hangar-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .status-live {
+    animation: none;
+  }
+}

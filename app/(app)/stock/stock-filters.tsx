@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Search, X, SlidersHorizontal, PackageX } from "lucide-react";
+import { useState } from "react";
+import { Search, X, SlidersHorizontal, PackageX, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FilterMenu, FilterChip, type FilterOption } from "@/components/filter-controls";
 import { cn } from "@/lib/utils";
+import { useStockNav } from "./stock-nav";
 
 type Option = FilterOption;
 
@@ -14,11 +14,6 @@ const STATUS_OPTS: Option[] = [
   { value: "serviceable", label: "Serviciable" },
   { value: "unserviceable", label: "No serviciable" },
   { value: "scrap", label: "Scrap" },
-];
-const CATEGORY_OPTS: Option[] = [
-  { value: "rotable", label: "Rotable" },
-  { value: "consumable", label: "Consumible" },
-  { value: "expendable", label: "Expendible" },
 ];
 const EXPIRY_OPTS: Option[] = [
   { value: "expired", label: "Vencidos" },
@@ -28,7 +23,6 @@ const EXPIRY_OPTS: Option[] = [
 type Props = {
   defaultQ: string;
   defaultStatus?: string;
-  defaultCategory?: string;
   defaultZone?: string;
   defaultExpiry?: string;
   defaultDepleted: boolean;
@@ -38,33 +32,20 @@ type Props = {
 export function StockFilters({
   defaultQ,
   defaultStatus,
-  defaultCategory,
   defaultZone,
   defaultExpiry,
   defaultDepleted,
   zones,
 }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const [isPending, startTransition] = useTransition();
+  const { setParam, replaceAll, isPending } = useStockNav();
   const [q, setQ] = useState(defaultQ);
 
-  useEffect(() => {
+  // Resincroniza el input cuando la URL cambia externamente (p. ej. "Limpiar
+  // todo"), sin useEffect — patrón de estado derivado durante el render.
+  const [prevDefaultQ, setPrevDefaultQ] = useState(defaultQ);
+  if (defaultQ !== prevDefaultQ) {
+    setPrevDefaultQ(defaultQ);
     setQ(defaultQ);
-  }, [defaultQ]);
-
-  function push(next: URLSearchParams) {
-    const s = next.toString();
-    startTransition(() => {
-      router.replace(s ? `/stock?${s}` : "/stock");
-    });
-  }
-
-  function setParam(key: string, value: string | null) {
-    const next = new URLSearchParams(searchParams);
-    if (!value) next.delete(key);
-    else next.set(key, value);
-    push(next);
   }
 
   const zoneOpts: Option[] = zones.map((z) => ({ value: z, label: z }));
@@ -75,12 +56,6 @@ export function StockFilters({
       key: "status",
       label: `Estado: ${labelOf(STATUS_OPTS, defaultStatus)}`,
       onRemove: () => setParam("status", null),
-    });
-  if (defaultCategory)
-    chips.push({
-      key: "category",
-      label: `Categoría: ${labelOf(CATEGORY_OPTS, defaultCategory)}`,
-      onRemove: () => setParam("category", null),
     });
   if (defaultZone)
     chips.push({
@@ -118,7 +93,7 @@ export function StockFilters({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar por P/N, serial, lote o descripción"
-            className="h-9 pl-8 pr-8 text-[14px] font-data placeholder:font-sans placeholder:text-ink-faint border-transparent bg-muted/50 focus-visible:bg-background"
+            className="h-9 rounded-full pl-8 pr-8 text-[14px] font-data placeholder:font-sans placeholder:text-ink-faint border-transparent bg-muted/50 focus-visible:bg-background"
           />
           {q && (
             <button
@@ -143,12 +118,6 @@ export function StockFilters({
           options={STATUS_OPTS}
           onChange={(v) => setParam("status", v)}
         />
-        <FilterMenu
-          label="Categoría"
-          value={defaultCategory}
-          options={CATEGORY_OPTS}
-          onChange={(v) => setParam("category", v)}
-        />
         {zoneOpts.length > 0 && (
           <FilterMenu
             label="Zona"
@@ -171,7 +140,7 @@ export function StockFilters({
           onClick={() => setParam("depleted", defaultDepleted ? null : "1")}
           data-press
           className={cn(
-            "h-9 gap-1.5 text-[13px]",
+            "h-9 gap-1.5 rounded-full text-[13px]",
             defaultDepleted && "text-ink",
           )}
         >
@@ -180,9 +149,7 @@ export function StockFilters({
         </Button>
 
         {isPending && (
-          <span className="font-data text-[10.5px] uppercase tracking-widest text-ink-faint ml-auto pr-1">
-            Filtrando…
-          </span>
+          <Loader2 className="ml-auto mr-1 size-4 animate-spin text-primary" />
         )}
       </div>
 
@@ -197,7 +164,7 @@ export function StockFilters({
             type="button"
             onClick={() => {
               setQ("");
-              push(new URLSearchParams());
+              replaceAll(new URLSearchParams());
             }}
             className="text-[12px] text-ink-muted hover:text-ink underline underline-offset-2 ml-1"
           >

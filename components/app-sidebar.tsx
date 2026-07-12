@@ -9,6 +9,8 @@ import {
   BookMarked,
   Users2,
   LogOut,
+  PackageCheck,
+  Plane,
 } from "lucide-react";
 import {
   Sidebar,
@@ -24,6 +26,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { ThemeToggle, ThemeToggleCompact } from "@/components/theme-toggle";
+import { logoutAction } from "@/lib/auth-actions";
 
 type NavItem = {
   label: string;
@@ -35,8 +38,10 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Stock", href: "/stock", icon: Boxes },
+  { label: "Despacho", href: "/dispatch", icon: PackageCheck },
   { label: "Movimientos", href: "/movements", icon: History },
   { label: "Catálogo", href: "/parts", icon: BookMarked },
+  { label: "Aeronaves", href: "/aircraft", icon: Plane, adminOnly: true },
   { label: "Usuarios", href: "/users", icon: Users2, adminOnly: true },
 ];
 
@@ -123,7 +128,7 @@ export function AppSidebar({
                 {role === "admin" ? "Admin" : "Operador"}
               </p>
             </div>
-            <form action="/api/auth/signout" method="post">
+            <form action={logoutAction}>
               <button
                 type="submit"
                 data-press
@@ -139,7 +144,7 @@ export function AppSidebar({
         {/* Collapsed footer */}
         <div className="hidden flex-col items-center gap-1.5 group-data-[collapsible=icon]:flex">
           <ThemeToggleCompact />
-          <form action="/api/auth/signout" method="post">
+          <form action={logoutAction}>
             <button
               type="submit"
               data-press

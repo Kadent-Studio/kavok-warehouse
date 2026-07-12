@@ -38,6 +38,11 @@ enum MovementType {
   status_change
 }
 
+enum DestinationType {
+  aircraft
+  other
+}
+
 model User {
   id           String   @id @default(cuid())
   username     String   @unique
@@ -48,38 +53,39 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  movements    StockMovement[]
+  movements      StockMovement[]
+  dispatchOrders DispatchOrder[]
 }
 
 model Part {
-  id                    String       @id @default(cuid())
-  partNumber            String       @unique
-  description           String
-  trackingType          TrackingType
-  manufacturer          String
-  unitOfMeasure         String
-  ataChapter            String?
-  category              PartCategory
-  shelfLifeDays         Int?
-  archived              Boolean      @default(false)
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  id            String       @id @default(cuid())
+  partNumber    String       @unique
+  description   String
+  trackingType  TrackingType
+  manufacturer  String
+  unitOfMeasure String
+  ataChapter    String?
+  category      PartCategory
+  shelfLifeDays Int?
+  archived      Boolean      @default(false)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 
-  stockItems            StockItem[]
-  alternatesFrom        PartAlternate[] @relation("PartAlternateFrom")
-  alternatesTo          PartAlternate[] @relation("PartAlternateTo")
+  stockItems     StockItem[]
+  alternatesFrom PartAlternate[] @relation("PartAlternateFrom")
+  alternatesTo   PartAlternate[] @relation("PartAlternateTo")
 
   @@index([partNumber])
   @@index([archived])
 }
 
 model PartAlternate {
-  id           String @id @default(cuid())
-  partId       String
-  alternateId  String
+  id          String @id @default(cuid())
+  partId      String
+  alternateId String
 
-  part         Part   @relation("PartAlternateFrom", fields: [partId], references: [id], onDelete: Cascade)
-  alternate    Part   @relation("PartAlternateTo",   fields: [alternateId], references: [id], onDelete: Cascade)
+  part      Part @relation("PartAlternateFrom", fields: [partId], references: [id], onDelete: Cascade)
+  alternate Part @relation("PartAlternateTo", fields: [alternateId], references: [id], onDelete: Cascade)
 
   @@unique([partId, alternateId])
 }
@@ -99,8 +105,8 @@ model StockItem {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  part           Part            @relation(fields: [partId], references: [id])
-  movements      StockMovement[]
+  part      Part            @relation(fields: [partId], references: [id])
+  movements StockMovement[]
 
   @@unique([partId, serialNumber])
   @@index([partId])
@@ -110,12 +116,12 @@ model StockItem {
 }
 
 model StockMovement {
-  id              String        @id @default(cuid())
+  id              String       @id @default(cuid())
   stockItemId     String
   type            MovementType
-  quantity        Decimal       @db.Decimal(14, 4)
+  quantity        Decimal      @db.Decimal(14, 4)
   userId          String
-  timestamp       DateTime      @default(now())
+  timestamp       DateTime     @default(now())
   fromZone        String?
   fromShelf       String?
   toZone          String?
@@ -127,12 +133,49 @@ model StockMovement {
   previousStatus  StockStatus?
   newStatus       StockStatus?
   notes           String?
+  dispatchOrderId String?
 
-  stockItem       StockItem @relation(fields: [stockItemId], references: [id])
-  user            User      @relation(fields: [userId], references: [id])
+  stockItem     StockItem      @relation(fields: [stockItemId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  dispatchOrder DispatchOrder? @relation(fields: [dispatchOrderId], references: [id])
 
   @@index([stockItemId])
   @@index([type])
   @@index([timestamp])
+  @@index([userId])
+  @@index([dispatchOrderId])
+}
+
+model Aircraft {
+  id           String   @id @default(cuid())
+  registration String   @unique
+  model        String?
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  dispatches DispatchOrder[]
+
+  @@index([active])
+}
+
+model DispatchOrder {
+  id              String          @id @default(cuid())
+  number          Int             @unique @default(autoincrement())
+  requestedBy     String
+  deliveredBy     String
+  destinationType DestinationType
+  aircraftId      String?
+  destinationText String?
+  notes           String?
+  userId          String
+  createdAt       DateTime        @default(now())
+
+  aircraft  Aircraft?       @relation(fields: [aircraftId], references: [id])
+  user      User            @relation(fields: [userId], references: [id])
+  movements StockMovement[]
+
+  @@index([createdAt])
+  @@index([aircraftId])
   @@index([userId])
 }

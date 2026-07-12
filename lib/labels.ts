@@ -1,4 +1,5 @@
 import type {
+  DestinationType,
   MovementType,
   PartCategory,
   Role,
@@ -34,4 +35,9 @@ export const movementTypeLabel: Record<MovementType, string> = {
   dispatch: "Salida",
   transfer: "Transferencia",
   status_change: "Cambio de estado",
+};
+
+export const destinationTypeLabel: Record<DestinationType, string> = {
+  aircraft: "Aeronave",
+  other: "Otro",
 };

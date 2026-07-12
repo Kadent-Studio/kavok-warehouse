@@ -9,6 +9,9 @@ import { StatusTag } from "@/components/status-tag";
 import { ExpiryBadge } from "@/components/expiry-badge";
 import { partCategoryLabel } from "@/lib/labels";
 import { StockFilters } from "./stock-filters";
+import { StockCategoryTabs } from "./stock-category-tabs";
+import { StockNavProvider, StockTableFrame } from "./stock-nav";
+import { StockPagination } from "./stock-pagination";
 
 type SearchParams = {
   q?: string;
@@ -17,9 +20,11 @@ type SearchParams = {
   zone?: string;
   expiry?: string;
   depleted?: string;
+  page?: string;
 };
 
 const STATUSES = ["serviceable", "unserviceable", "scrap"];
+const PER_PAGE = 50;
 
 export default async function StockPage({
   searchParams,
@@ -31,15 +36,19 @@ export default async function StockPage({
   const showDepleted = sp.depleted === "1";
   const now = new Date();
 
-  const where: Prisma.StockItemWhereInput = {
+  const category =
+    sp.category && ["rotable", "consumable", "expendable"].includes(sp.category)
+      ? sp.category
+      : undefined;
+
+  // Base filter shared by the item query and the per-category tab counts —
+  // excludes category so each tab shows its count within the current context.
+  const baseWhere: Prisma.StockItemWhereInput = {
     ...(showDepleted ? {} : { quantity: { gt: 0 } }),
     ...(sp.status && STATUSES.includes(sp.status)
       ? { status: sp.status as Prisma.StockItemWhereInput["status"] }
       : {}),
     ...(sp.zone ? { zone: sp.zone } : {}),
-    ...(sp.category && ["rotable", "consumable", "expendable"].includes(sp.category)
-      ? { part: { category: sp.category as never } }
-      : {}),
     ...(sp.expiry === "expired"
       ? { expirationDate: { lt: now } }
       : sp.expiry === "soon"
@@ -62,29 +71,55 @@ export default async function StockPage({
       : {}),
   };
 
-  const [items, zones, totalItems] = await Promise.all([
-    prisma.stockItem.findMany({
-      where,
-      include: {
-        part: {
-          select: {
-            partNumber: true,
-            description: true,
-            unitOfMeasure: true,
-            category: true,
+  const where: Prisma.StockItemWhereInput = {
+    ...baseWhere,
+    ...(category ? { part: { category: category as never } } : {}),
+  };
+
+  const catWhere = (cat: string): Prisma.StockItemWhereInput => ({
+    ...baseWhere,
+    part: { category: cat as never },
+  });
+
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
+
+  const [items, filteredCount, zones, totalItems, cAll, cRot, cCon, cExp] =
+    await Promise.all([
+      prisma.stockItem.findMany({
+        where,
+        include: {
+          part: {
+            select: {
+              partNumber: true,
+              description: true,
+              unitOfMeasure: true,
+              category: true,
+            },
           },
         },
-      },
-      orderBy: [{ createdAt: "desc" }],
-      take: 500,
-    }),
-    prisma.stockItem.findMany({
-      distinct: ["zone"],
-      select: { zone: true },
-      orderBy: { zone: "asc" },
-    }),
-    prisma.stockItem.count({ where: { quantity: { gt: 0 } } }),
-  ]);
+        orderBy: [{ createdAt: "desc" }],
+        skip: (page - 1) * PER_PAGE,
+        take: PER_PAGE,
+      }),
+      prisma.stockItem.count({ where }),
+      prisma.stockItem.findMany({
+        distinct: ["zone"],
+        select: { zone: true },
+        orderBy: { zone: "asc" },
+      }),
+      prisma.stockItem.count({ where: { quantity: { gt: 0 } } }),
+      prisma.stockItem.count({ where: baseWhere }),
+      prisma.stockItem.count({ where: catWhere("rotable") }),
+      prisma.stockItem.count({ where: catWhere("consumable") }),
+      prisma.stockItem.count({ where: catWhere("expendable") }),
+    ]);
+
+  const categoryCounts = {
+    all: cAll,
+    rotable: cRot,
+    consumable: cCon,
+    expendable: cExp,
+  };
 
   return (
     <div className="p-6 lg:p-8 space-y-6">
@@ -121,44 +156,57 @@ export default async function StockPage({
         }
       />
 
-      <StockFilters
-        defaultQ={q}
-        defaultStatus={sp.status}
-        defaultCategory={sp.category}
-        defaultZone={sp.zone}
-        defaultExpiry={sp.expiry}
-        defaultDepleted={showDepleted}
-        zones={zones.map((z) => z.zone)}
-      />
+      <StockNavProvider>
+        <StockCategoryTabs active={category} counts={categoryCounts} />
 
-      {items.length === 0 ? (
-        <EmptyState
-          code="Sin resultados"
-          title={q ? `Nada coincide con "${q}"` : "Sin stock registrado"}
-          description={
-            q
-              ? "Ajusta los filtros o revisa la ortografía."
-              : "Registra la primera recepción o carga tu inventario inicial para empezar."
-          }
-          action={
-            !q && (
-              <Button
-                size="sm"
-                data-press
-                nativeButton={false}
-                render={
-                  <Link href="/stock/new">
-                    <Plus className="size-3.5" />
-                    Recibir / Cargar
-                  </Link>
-                }
-              />
-            )
-          }
+        <StockFilters
+          defaultQ={q}
+          defaultStatus={sp.status}
+          defaultZone={sp.zone}
+          defaultExpiry={sp.expiry}
+          defaultDepleted={showDepleted}
+          zones={zones.map((z) => z.zone)}
         />
-      ) : (
-        <StockTable items={items} />
-      )}
+
+        <StockTableFrame>
+          {items.length === 0 ? (
+            <EmptyState
+              code="Sin resultados"
+              title={q ? `Nada coincide con "${q}"` : "Sin stock registrado"}
+              description={
+                q
+                  ? "Ajusta los filtros o revisa la ortografía."
+                  : "Registra la primera recepción o carga tu inventario inicial para empezar."
+              }
+              action={
+                !q && (
+                  <Button
+                    size="sm"
+                    data-press
+                    nativeButton={false}
+                    render={
+                      <Link href="/stock/new">
+                        <Plus className="size-3.5" />
+                        Recibir / Cargar
+                      </Link>
+                    }
+                  />
+                )
+              }
+            />
+          ) : (
+            <StockTable items={items} />
+          )}
+        </StockTableFrame>
+
+        {filteredCount > 0 && (
+          <StockPagination
+            page={page}
+            perPage={PER_PAGE}
+            total={filteredCount}
+          />
+        )}
+      </StockNavProvider>
     </div>
   );
 }
