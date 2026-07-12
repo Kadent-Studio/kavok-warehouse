@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  operator
+  admin
+}
+
+enum TrackingType {
+  serial
+  lot
+}
+
+enum PartCategory {
+  rotable
+  consumable
+  expendable
+}
+
+enum StockStatus {
+  serviceable
+  unserviceable
+  scrap
+}
+
+enum MovementType {
+  initial_stock
+  receipt
+  dispatch
+  transfer
+  status_change
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  passwordHash String
+  fullName     String
+  role         Role     @default(operator)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  movements    StockMovement[]
+}
+
+model Part {
+  id                    String       @id @default(cuid())
+  partNumber            String       @unique
+  description           String
+  trackingType          TrackingType
+  manufacturer          String
+  unitOfMeasure         String
+  ataChapter            String?
+  category              PartCategory
+  shelfLifeDays         Int?
+  archived              Boolean      @default(false)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  stockItems            StockItem[]
+  alternatesFrom        PartAlternate[] @relation("PartAlternateFrom")
+  alternatesTo          PartAlternate[] @relation("PartAlternateTo")
+
+  @@index([partNumber])
+  @@index([archived])
+}
+
+model PartAlternate {
+  id           String @id @default(cuid())
+  partId       String
+  alternateId  String
+
+  part         Part   @relation("PartAlternateFrom", fields: [partId], references: [id], onDelete: Cascade)
+  alternate    Part   @relation("PartAlternateTo",   fields: [alternateId], references: [id], onDelete: Cascade)
+
+  @@unique([partId, alternateId])
+}
+
+model StockItem {
+  id             String      @id @default(cuid())
+  partId         String
+  serialNumber   String?
+  lotNumber      String?
+  quantity       Decimal     @db.Decimal(14, 4)
+  zone           String
+  shelf          String
+  status         StockStatus @default(serviceable)
+  receiptDate    DateTime
+  expirationDate DateTime?
+  notes          String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  part           Part            @relation(fields: [partId], references: [id])
+  movements      StockMovement[]
+
+  @@unique([partId, serialNumber])
+  @@index([partId])
+  @@index([status])
+  @@index([expirationDate])
+  @@index([zone, shelf])
+}
+
+model StockMovement {
+  id              String        @id @default(cuid())
+  stockItemId     String
+  type            MovementType
+  quantity        Decimal       @db.Decimal(14, 4)
+  userId          String
+  timestamp       DateTime      @default(now())
+  fromZone        String?
+  fromShelf       String?
+  toZone          String?
+  toShelf         String?
+  supplier        String?
+  recipient       String?
+  referenceNumber String?
+  reason          String?
+  previousStatus  StockStatus?
+  newStatus       StockStatus?
+  notes           String?
+
+  stockItem       StockItem @relation(fields: [stockItemId], references: [id])
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@index([stockItemId])
+  @@index([type])
+  @@index([timestamp])
+  @@index([userId])
+}
