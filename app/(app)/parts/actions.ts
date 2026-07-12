@@ -44,6 +44,16 @@ export async function createPart(raw: unknown) {
     };
   }
 
+  const alternateIds = Array.isArray((raw as { alternateIds?: unknown })?.alternateIds)
+    ? [
+        ...new Set(
+          (raw as { alternateIds: unknown[] }).alternateIds.filter(
+            (v): v is string => typeof v === "string" && v.length > 0,
+          ),
+        ),
+      ]
+    : [];
+
   try {
     const part = await prisma.part.create({
       data: {
@@ -57,6 +67,18 @@ export async function createPart(raw: unknown) {
         shelfLifeDays: parsed.data.shelfLifeDays ?? null,
       },
     });
+
+    if (alternateIds.length > 0) {
+      await prisma.partAlternate.createMany({
+        data: alternateIds.flatMap((altId) => [
+          { partId: part.id, alternateId: altId },
+          { partId: altId, alternateId: part.id },
+        ]),
+        skipDuplicates: true,
+      });
+      for (const altId of alternateIds) revalidatePath(`/parts/${altId}`);
+    }
+
     revalidatePath("/parts");
     return { ok: true as const, id: part.id };
   } catch (e) {

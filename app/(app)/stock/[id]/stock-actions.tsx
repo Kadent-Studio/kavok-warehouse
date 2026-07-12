@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowDownRight, ArrowLeftRight, RefreshCw, TriangleAlert } from "lucide-react";
+import { ArrowLeftRight, RefreshCw } from "lucide-react";
 import type { StockStatus } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,43 +23,28 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { stockStatusLabel } from "@/lib/labels";
-import { expiryStatus } from "@/lib/dates";
-import { dispatchStock, transferStock, changeStockStatus } from "../actions";
+import { transferStock, changeStockStatus } from "../actions";
 
-type Dlg = "dispatch" | "transfer" | "status" | null;
+type Dlg = "transfer" | "status" | null;
 
 export function StockActions({
   itemId,
   quantity,
-  unitOfMeasure,
   status,
   zone,
   shelf,
-  expiration,
 }: {
   itemId: string;
   quantity: number;
-  unitOfMeasure: string;
   status: StockStatus;
   zone: string;
   shelf: string;
-  expiration: Date | null;
 }) {
   const [dlg, setDlg] = useState<Dlg>(null);
   const depleted = quantity <= 0;
 
   return (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        data-press
-        disabled={depleted}
-        onClick={() => setDlg("dispatch")}
-      >
-        <ArrowDownRight className="size-3.5" />
-        Salida
-      </Button>
       <Button
         variant="outline"
         size="sm"
@@ -75,15 +60,6 @@ export function StockActions({
         Cambiar estado
       </Button>
 
-      <DispatchDialog
-        open={dlg === "dispatch"}
-        onClose={() => setDlg(null)}
-        itemId={itemId}
-        quantity={quantity}
-        unitOfMeasure={unitOfMeasure}
-        status={status}
-        expiration={expiration}
-      />
       <TransferDialog
         open={dlg === "transfer"}
         onClose={() => setDlg(null)}
@@ -117,143 +93,6 @@ function useAction(onClose: () => void) {
     });
   }
   return { isPending, run };
-}
-
-function DispatchDialog({
-  open,
-  onClose,
-  itemId,
-  quantity,
-  unitOfMeasure,
-  status,
-  expiration,
-}: {
-  open: boolean;
-  onClose: () => void;
-  itemId: string;
-  quantity: number;
-  unitOfMeasure: string;
-  status: StockStatus;
-  expiration: Date | null;
-}) {
-  const { isPending, run } = useAction(onClose);
-  const [qty, setQty] = useState("1");
-  const [recipient, setRecipient] = useState("");
-  const [reference, setReference] = useState("");
-  const [reason, setReason] = useState("");
-  const [notes, setNotes] = useState("");
-
-  const notServiceable = status !== "serviceable";
-  const expired = expiryStatus(expiration) === "expired";
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[460px]">
-        <DialogHeader>
-          <p className="font-data text-[10.5px] uppercase tracking-[0.16em] text-primary/60">
-            Movimiento · Salida
-          </p>
-          <DialogTitle className="font-display text-[18px]">
-            Registrar salida
-          </DialogTitle>
-        </DialogHeader>
-
-        {(notServiceable || expired) && (
-          <div className="flex gap-2.5 rounded-lg border border-[color:var(--tag-uns-border)] bg-tag-uns/60 px-3 py-2.5 text-[12.5px] text-tag-uns-foreground">
-            <TriangleAlert className="size-4 shrink-0 mt-0.5" />
-            <div className="space-y-0.5">
-              {notServiceable && (
-                <p>
-                  Este ítem está <b>{stockStatusLabel[status].toLowerCase()}</b>.
-                  El motivo es obligatorio.
-                </p>
-              )}
-              {expired && <p>El ítem está vencido. Verifica antes de despachar.</p>}
-            </div>
-          </div>
-        )}
-
-        <div className="space-y-4 py-1">
-          <div className="space-y-1.5">
-            <Label className="text-[11.5px] uppercase tracking-[0.12em] text-ink-muted font-medium">
-              Cantidad a despachar *
-            </Label>
-            <div className="flex items-center gap-2">
-              <Input
-                type="number"
-                min={0}
-                step="any"
-                value={qty}
-                onChange={(e) => setQty(e.target.value)}
-                className="font-data tnum"
-              />
-              <span className="text-[12px] uppercase text-ink-faint font-data shrink-0">
-                {unitOfMeasure}
-              </span>
-            </div>
-            <p className="text-[11.5px] text-ink-faint">
-              Disponible: <span className="tnum">{quantity}</span> {unitOfMeasure}
-            </p>
-          </div>
-
-          <Two>
-            <Small label="Destinatario">
-              <Input
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                placeholder="Aeronave, taller, work order…"
-              />
-            </Small>
-            <Small label="Referencia">
-              <Input
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                className="font-data"
-                placeholder="N° documento"
-              />
-            </Small>
-          </Two>
-
-          <Small label={`Motivo${notServiceable ? " *" : ""}`}>
-            <Input
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder={notServiceable ? "Obligatorio" : "Opcional"}
-            />
-          </Small>
-          <Small label="Notas">
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </Small>
-        </div>
-
-        <DialogFooter>
-          <Button variant="ghost" size="sm" onClick={onClose} disabled={isPending} data-press>
-            Cancelar
-          </Button>
-          <Button
-            size="sm"
-            data-press
-            disabled={isPending}
-            onClick={() =>
-              run(
-                () =>
-                  dispatchStock(itemId, {
-                    quantity: Number(qty),
-                    recipient,
-                    referenceNumber: reference,
-                    reason,
-                    notes,
-                  }),
-                "Salida registrada",
-              )
-            }
-          >
-            {isPending ? "Registrando…" : "Registrar salida"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 }
 
 function TransferDialog({

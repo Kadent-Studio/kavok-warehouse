@@ -44,66 +44,6 @@ function revalidateStock(id: string) {
   revalidatePath("/dashboard");
 }
 
-// ── Salida / Despacho ─────────────────────────────────────────
-const dispatchSchema = z.object({
-  quantity: z.coerce.number().positive("Cantidad inválida"),
-  recipient: z.string().trim().max(128).optional(),
-  referenceNumber: z.string().trim().max(64).optional(),
-  reason: z.string().trim().max(500).optional(),
-  notes: z.string().trim().max(500).optional(),
-});
-
-export async function dispatchStock(itemId: string, raw: unknown) {
-  const user = await requireUser();
-  const parsed = dispatchSchema.safeParse(raw);
-  if (!parsed.success)
-    return {
-      ok: false as const,
-      error: parsed.error.issues[0]?.message ?? "Datos inválidos",
-    };
-  const data = parsed.data;
-
-  const item = await prisma.stockItem.findUnique({ where: { id: itemId } });
-  if (!item) return { ok: false as const, error: "Ítem no encontrado" };
-
-  const available = Number(item.quantity);
-  if (data.quantity > available)
-    return {
-      ok: false as const,
-      error: `No puedes despachar ${data.quantity}; solo hay ${available} en stock`,
-    };
-
-  if (item.status !== "serviceable" && !data.reason)
-    return {
-      ok: false as const,
-      error: "Indica un motivo para despachar un ítem no serviciable o scrap",
-    };
-
-  await prisma.$transaction(async (tx) => {
-    await tx.stockItem.update({
-      where: { id: itemId },
-      data: { quantity: new Prisma.Decimal(available - data.quantity) },
-    });
-    await tx.stockMovement.create({
-      data: {
-        stockItemId: itemId,
-        type: "dispatch",
-        quantity: new Prisma.Decimal(data.quantity),
-        userId: user.id,
-        fromZone: item.zone,
-        fromShelf: item.shelf,
-        recipient: data.recipient ?? null,
-        referenceNumber: data.referenceNumber ?? null,
-        reason: data.reason ?? null,
-        notes: data.notes ?? null,
-      },
-    });
-  });
-
-  revalidateStock(itemId);
-  return { ok: true as const };
-}
-
 // ── Transferencia ─────────────────────────────────────────────
 const transferSchema = z.object({
   toZone: z.string().trim().min(1, "Zona destino requerida").max(64),

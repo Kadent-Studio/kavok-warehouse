@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { X, Plus } from "lucide-react";
 import type { Part } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +24,16 @@ type Mode = "create" | "edit";
 type Props =
   | { mode: "create"; part?: undefined }
   | { mode: "edit"; part: Part };
+
+type AltSearchResult = {
+  id: string;
+  partNumber: string;
+  description: string;
+  trackingType: "serial" | "lot";
+  unitOfMeasure: string;
+  shelfLifeDays: number | null;
+  category: "rotable" | "consumable" | "expendable";
+};
 
 const CATEGORY_OPTIONS = [
   { value: "rotable", label: "Rotable" },
@@ -54,6 +65,66 @@ export function PartForm({ mode, part }: Props) {
     part?.shelfLifeDays != null ? String(part.shelfLifeDays) : "",
   );
 
+  const [altQuery, setAltQuery] = useState("");
+  const [altResults, setAltResults] = useState<AltSearchResult[]>([]);
+  const [altSearching, setAltSearching] = useState(false);
+  const [selectedAlts, setSelectedAlts] = useState<AltSearchResult[]>([]);
+
+  async function searchAlternates(q: string) {
+    setAltQuery(q);
+    if (q.trim().length < 2) {
+      setAltResults([]);
+      return;
+    }
+    setAltSearching(true);
+    try {
+      const res = await fetch(`/api/parts/search?q=${encodeURIComponent(q)}`);
+      const data: AltSearchResult[] = await res.json();
+      const chosen = new Set(selectedAlts.map((a) => a.id));
+      setAltResults(data.filter((d) => !chosen.has(d.id)));
+    } finally {
+      setAltSearching(false);
+    }
+  }
+
+  function selectAlternate(alt: AltSearchResult) {
+    // Al agregar el primer alterno, adoptamos su clasificación para los
+    // campos que sigan en su valor por defecto — sin pisar lo ya escrito.
+    if (selectedAlts.length === 0) {
+      let adopted = false;
+      if (description === "") {
+        setDescription(alt.description);
+        adopted = true;
+      }
+      if (category === "rotable" && alt.category !== "rotable") {
+        setCategory(alt.category);
+        adopted = true;
+      }
+      if (trackingType === "serial" && alt.trackingType !== "serial") {
+        setTrackingType(alt.trackingType);
+        adopted = true;
+      }
+      if (unitOfMeasure === "EA" && alt.unitOfMeasure !== "EA") {
+        setUnitOfMeasure(alt.unitOfMeasure);
+        adopted = true;
+      }
+      if (shelfLifeDays === "" && alt.shelfLifeDays != null) {
+        setShelfLifeDays(String(alt.shelfLifeDays));
+        adopted = true;
+      }
+      if (adopted) {
+        toast.info(`Clasificación tomada de ${alt.partNumber} (editable)`);
+      }
+    }
+    setSelectedAlts((prev) => [...prev, alt]);
+    setAltQuery("");
+    setAltResults([]);
+  }
+
+  function deselectAlternate(id: string) {
+    setSelectedAlts((prev) => prev.filter((a) => a.id !== id));
+  }
+
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const payload = {
@@ -65,6 +136,7 @@ export function PartForm({ mode, part }: Props) {
       trackingType,
       ataChapter: ataChapter || undefined,
       shelfLifeDays: shelfLifeDays === "" ? undefined : Number(shelfLifeDays),
+      alternateIds: selectedAlts.map((a) => a.id),
     };
 
     startTransition(async () => {
@@ -222,6 +294,88 @@ export function PartForm({ mode, part }: Props) {
           </FieldHint>
         </Field>
       </Section>
+
+      {mode === "create" && (
+        <Section
+          code="C"
+          title="Partes alternas"
+          description="Partes ya en catálogo intercambiables con esta. La vinculación es bidireccional y opcional."
+        >
+          <div className="sm:col-span-2 space-y-3">
+            <div className="relative">
+              <Input
+                value={altQuery}
+                onChange={(e) => searchAlternates(e.target.value)}
+                placeholder="Buscar P/N o descripción…"
+                autoComplete="off"
+                className="font-data text-[13px] placeholder:font-sans"
+              />
+              {altResults.length > 0 && (
+                <div className="absolute z-10 mt-1 left-0 right-0 border border-border rounded-md bg-popover shadow-md overflow-hidden">
+                  {altResults.map((r) => (
+                    <button
+                      key={r.id}
+                      type="button"
+                      onClick={() => selectAlternate(r)}
+                      className="w-full text-left px-3 py-2 hover:bg-muted transition-colors flex items-center justify-between gap-3 border-b border-border last:border-b-0"
+                      data-press
+                    >
+                      <span className="flex-1 min-w-0">
+                        <span className="font-data text-[12px] text-ink block truncate">
+                          {r.partNumber}
+                        </span>
+                        <span className="text-[11.5px] text-ink-muted block truncate">
+                          {r.description}
+                        </span>
+                      </span>
+                      <Plus className="size-3.5 text-ink-faint shrink-0" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              {altSearching && (
+                <p className="mt-1 font-data text-[10px] uppercase tracking-widest text-ink-faint">
+                  Buscando…
+                </p>
+              )}
+            </div>
+
+            {selectedAlts.length === 0 ? (
+              <p className="text-[11.5px] text-ink-faint py-2">
+                Ninguna alternativa seleccionada. Puedes agregarlas ahora o más
+                tarde desde la ficha de la parte.
+              </p>
+            ) : (
+              <ul className="space-y-1.5">
+                {selectedAlts.map((a) => (
+                  <li
+                    key={a.id}
+                    className="flex items-center justify-between gap-2 border border-border rounded-sm px-2.5 py-2 bg-muted/30"
+                  >
+                    <span className="flex-1 min-w-0">
+                      <span className="font-data text-[12px] text-ink block truncate">
+                        {a.partNumber}
+                      </span>
+                      <span className="text-[11px] text-ink-muted block truncate">
+                        {a.description}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => deselectAlternate(a.id)}
+                      className="p-1 text-ink-faint hover:text-destructive rounded-sm hover:bg-destructive/10 transition-colors"
+                      data-press
+                      aria-label="Quitar alternativa"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </Section>
+      )}
 
       <div className="flex items-center justify-between pt-4 border-t border-border/70">
         <p className="text-[11.5px] text-ink-faint">

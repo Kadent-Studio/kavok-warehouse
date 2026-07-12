@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { LoginForm } from "./login-form";
+import { ThemeToggleCompact } from "@/components/theme-toggle";
 
 const MANIFEST = [
   { label: "Estación", value: "YV · Hangar 01" },
@@ -112,7 +113,10 @@ export default async function LoginPage() {
       </aside>
 
       {/* Right — access form */}
-      <main className="flex items-center justify-center px-6 py-12 sm:px-10">
+      <main className="relative flex items-center justify-center px-6 py-12 sm:px-10">
+        <div className="absolute right-5 top-5 sm:right-8 sm:top-8">
+          <ThemeToggleCompact />
+        </div>
         <div className="w-full max-w-sm">
           {/* mobile brand */}
           <div className="mb-10 flex items-center gap-3 lg:hidden">

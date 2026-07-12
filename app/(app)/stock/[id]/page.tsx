@@ -75,11 +75,9 @@ export default async function StockDetailPage({
           <StockActions
             itemId={item.id}
             quantity={qty}
-            unitOfMeasure={item.part.unitOfMeasure}
             status={item.status}
             zone={item.zone}
             shelf={item.shelf}
-            expiration={item.expirationDate}
           />
         }
       />

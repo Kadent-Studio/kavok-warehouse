@@ -17,7 +17,6 @@ import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -147,8 +146,11 @@ function DispatchDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-2xl gap-0 p-0 max-h-[88vh] flex flex-col overflow-hidden">
-        <DialogHeader className="p-5 pb-4 pr-12 border-b border-border/60">
+      <DialogContent
+        showCloseButton={false}
+        className="sm:max-w-2xl gap-0 p-0 max-h-[88vh] overflow-y-auto"
+      >
+        <DialogHeader className="sticky top-0 z-10 bg-popover p-5 pb-4 border-b border-border/60">
           <p className="font-data text-[10.5px] uppercase tracking-[0.16em] text-primary/60">
             04 · Despacho · Nuevo vale
           </p>
@@ -157,7 +159,7 @@ function DispatchDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-7">
+        <div className="p-5 space-y-7">
           {/* ── Cabecera ─────────────────────────────── */}
           <section className="space-y-4">
             <SectionLabel code="A">Datos del vale</SectionLabel>
@@ -292,7 +294,7 @@ function DispatchDialog({
           </section>
         </div>
 
-        <DialogFooter className="m-0 rounded-none border-t border-border">
+        <div className="sticky bottom-0 z-10 flex items-center justify-end gap-2 border-t border-border bg-muted/70 px-5 py-3.5 backdrop-blur-sm">
           <Button
             variant="ghost"
             size="sm"
@@ -312,7 +314,7 @@ function DispatchDialog({
               "Registrar despacho"
             )}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
