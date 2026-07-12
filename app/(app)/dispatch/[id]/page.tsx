@@ -7,6 +7,8 @@ import { formatDateTime } from "@/lib/dates";
 import { destinationLabel, formatFolio } from "@/lib/dispatch";
 import { destinationTypeLabel, partCategoryLabel } from "@/lib/labels";
 
+export const metadata = { title: "Detalle de despacho" };
+
 export default async function DispatchDetailPage({
   params,
 }: {

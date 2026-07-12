@@ -32,6 +32,8 @@ const TYPE_TONE: Record<MovementType, string> = {
   status_change: "bg-tag-uns text-tag-uns-foreground",
 };
 
+export const metadata = { title: "Movimientos" };
+
 export default async function MovementsPage({
   searchParams,
 }: {

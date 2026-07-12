@@ -26,6 +26,8 @@ type SearchParams = {
 const STATUSES = ["serviceable", "unserviceable", "scrap"];
 const PER_PAGE = 50;
 
+export const metadata = { title: "Stock" };
+
 export default async function StockPage({
   searchParams,
 }: {

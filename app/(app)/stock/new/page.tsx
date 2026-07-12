@@ -1,6 +1,8 @@
 import { PageHeader } from "@/components/page-header";
 import { StockEntryForm } from "./stock-entry-form";
 
+export const metadata = { title: "Nuevo ingreso" };
+
 export default function NewStockPage() {
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Caracas",

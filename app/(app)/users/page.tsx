@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { UsersClient } from "./users-client";
 
+export const metadata = { title: "Usuarios" };
+
 export default async function UsersPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

@@ -8,6 +8,8 @@ const MANIFEST = [
   { label: "Módulos", value: "Inventario · Movimientos" },
 ] as const;
 
+export const metadata = { title: "Iniciar sesión" };
+
 export default async function LoginPage() {
   const session = await auth();
   if (session?.user) redirect("/dashboard");

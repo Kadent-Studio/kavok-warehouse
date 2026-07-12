@@ -15,6 +15,8 @@ type SearchParams = {
   archived?: string;
 };
 
+export const metadata = { title: "Catálogo" };
+
 export default async function PartsPage({
   searchParams,
 }: {

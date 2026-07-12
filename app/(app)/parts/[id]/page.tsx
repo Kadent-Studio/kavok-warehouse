@@ -10,6 +10,8 @@ import { AlternatesPanel } from "./alternates-panel";
 import { ArchiveButton } from "./archive-button";
 import { StatusTag } from "@/components/status-tag";
 
+export const metadata = { title: "Detalle de parte" };
+
 export default async function PartDetailPage({
   params,
 }: {

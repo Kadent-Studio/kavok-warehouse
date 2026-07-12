@@ -24,6 +24,8 @@ const MOVEMENT_ICON: Record<MovementType, React.ComponentType<{ className?: stri
   status_change: RefreshCw,
 };
 
+export const metadata = { title: "Detalle de stock" };
+
 export default async function StockDetailPage({
   params,
 }: {

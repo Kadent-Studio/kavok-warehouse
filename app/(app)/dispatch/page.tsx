@@ -10,6 +10,8 @@ import { destinationTypeLabel } from "@/lib/labels";
 import { cn } from "@/lib/utils";
 import { NewDispatch } from "./new-dispatch";
 
+export const metadata = { title: "Despacho" };
+
 export default async function DispatchPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

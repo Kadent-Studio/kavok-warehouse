@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { PartForm } from "../../part-form";
 
+export const metadata = { title: "Editar parte" };
+
 export default async function EditPartPage({
   params,
 }: {

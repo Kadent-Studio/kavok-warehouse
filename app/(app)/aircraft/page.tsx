@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { PageHeader } from "@/components/page-header";
 import { AircraftClient } from "./aircraft-client";
 
+export const metadata = { title: "Aeronaves" };
+
 export default async function AircraftPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");

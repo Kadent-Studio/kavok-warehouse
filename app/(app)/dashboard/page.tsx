@@ -65,6 +65,8 @@ function relativeTime(date: Date, now: Date) {
   return days === 1 ? "ayer" : `hace ${days} días`;
 }
 
+export const metadata = { title: "Dashboard" };
+
 export default async function DashboardPage() {
   const session = await auth();
   const now = new Date();
